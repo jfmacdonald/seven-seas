@@ -12,7 +12,7 @@ let treasure;
  * @return {Constructor} A new TreasureChest instance
  */
 function createTreasure() {
-  console.log("createTreasure");
+  // console.log("createTreasure");
   // Get any saved loot from localStorage
   let savedLoot = JSON.parse(localStorage.getItem("ss-treasure"));
 
@@ -24,7 +24,7 @@ function createTreasure() {
  * Display the amount of loot in the UI
  */
 function showLoot() {
-  console.log("showLoot");
+  // console.log("showLoot");
   let loot = document.querySelector("#loot");
   if (!loot) return;
   loot.textContent = treasure.getLoot();
