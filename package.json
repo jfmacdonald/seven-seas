@@ -1,0 +1,15 @@
+{
+  "name": "seven-seas",
+  "version": "0.5.1",
+  "description": "a Vanilla JS Structure and Scale project",
+  "main": "scripts.js",
+  "scripts": {
+    "build": "npm run js",
+    "js": "rollup --config"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "rollup": "^2.78.1"
+  }
+}
