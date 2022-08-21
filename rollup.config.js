@@ -1,7 +1,9 @@
-export default {
-  input: "src/index.js",
+const files = ["index.js", "dice.js", "treasure.js"];
+
+export default files.map((file) => ({
+  input: `src/${file}`,
   output: {
-    file: "scripts.js",
+    file: `js/${file}`,
     format: "iife",
   },
-};
+}));

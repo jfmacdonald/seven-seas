@@ -1,120 +1,6 @@
 (function () {
   'use strict';
 
-  class RollDice extends HTMLElement {
-    #dice;
-
-    /**
-     * The constructor object
-     */
-    constructor() {
-      // Run this first
-      super();
-
-      // Creates a shadow root
-      this.root = this.attachShadow({ mode: "closed" });
-
-      // Define properties
-      this.#dice = [1, 2, 3, 4, 5, 6];
-
-      // Render HTML
-      this.root.innerHTML = `<style>
-				button {
-					background-color: var(--bg-color, #0088cc);
-					border: 1px solid var(--bg-color, #0088cc);
-					border-radius: var(--radius, 0.25em);
-					color: var(--color, #ffffff);
-					font-size: var(--size, 1.5em);
-					padding: 0.5em 1em;
-				}
-
-				[aria-live] {
-					font-size: var(--msg-size, 1.3125em);
-					font-weight: var(--msg-weight, normal);
-					font-style: var(--msg-style, normal);
-					color: var(--msg-color, inherit);
-				}
-			</style>
-			<p>
-				<button><slot>Roll Dice</slot></button>
-			</p>
-			<div aria-live="polite"></div>`;
-    }
-
-    /**
-     * Randomly shuffle an array
-     * https://stackoverflow.com/a/2450976/1293256
-     * @param  {Array} array The array to shuffle
-     * @return {Array}       The shuffled array
-     */
-    #shuffle(array) {
-      let currentIndex = array.length;
-      let temporaryValue, randomIndex;
-
-      // While there remain elements to shuffle...
-      while (0 !== currentIndex) {
-        // Pick a remaining element...
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex -= 1;
-
-        // And swap it with the current element.
-        temporaryValue = array[currentIndex];
-        array[currentIndex] = array[randomIndex];
-        array[randomIndex] = temporaryValue;
-      }
-
-      return array;
-    }
-
-    /**
-     * Shuffle dice array and return first number
-     * @return {Number}   The result
-     */
-    #roll() {
-      this.#shuffle(this.#dice);
-      return this.#dice[0];
-    }
-
-    /**
-     * Handle click events
-     * @param  {Event} event The event object
-     */
-    #clickHandler(event) {
-      // Get the host component
-      let host = event.target.getRootNode().host;
-
-      // Get the message element
-      let target = host.root.querySelector('[aria-live="polite"]');
-      if (!target) return;
-
-      // Roll the dice
-      let roll = host.#roll();
-
-      // Inject the message into the UI
-      target.textContent = `You rolled a ${roll}`;
-    }
-
-    /**
-     * Runs each time the element is appended to or moved in the DOM
-     */
-    connectedCallback() {
-      // Attach a click event listener to the button
-      let btn = this.root.querySelector("button");
-      if (!btn) return;
-      btn.addEventListener("click", this.#clickHandler);
-    }
-
-    /**
-     * Runs when the element is removed from the DOM
-     */
-    disconnectedCallback() {
-      // Remove the click event listener from the button
-      let btn = this.root.querySelector("button");
-      if (!btn) return;
-      btn.removeEventListener("click", this.#clickHandler);
-    }
-  }
-
   class TreasureChest {
     #bronze;
     #silver;
@@ -276,12 +162,9 @@
     }
   }
 
-  //
-  // Functions
-  //
-
-  // Hold the treasure instance
-  let treasure;
+  // singleton treasure
+  let treasure = null;
+  const localStorageKey = "ss-treasure";
 
   /**
    * Create new treasure instance
@@ -290,39 +173,61 @@
   function createTreasure() {
     // console.log("createTreasure");
     // Get any saved loot from localStorage
-    let savedLoot = JSON.parse(localStorage.getItem("ss-treasure"));
+    const savedLoot = JSON.parse(localStorage.getItem(localStorageKey));
 
     // Create new Treasure Chest instance
-    treasure = new TreasureChest(savedLoot);
+    if (!treasure) treasure = new TreasureChest(savedLoot);
+    return treasure;
+  }
+
+  /**
+   * Save loot to localStorage
+   * @param  {object} { gold, silver, bronze}
+   */
+  function saveLoot() {
+    // Create the treasure object
+
+    if (treasure) {
+      const gold = treasure.getGold();
+      const silver = treasure.getSilver();
+      const bronze = treasure.getBronze();
+      // Save it to localStorage
+      localStorage.setItem(
+        localStorageKey,
+        JSON.stringify({
+          gold,
+          silver,
+          bronze,
+        })
+      );
+    }
+  }
+
+  /**
+   * Add loot to treasure
+   * @param {object} { gold, silver, bronze}
+   */
+  function addLoot({ gold, silver, bronze }) {
+    if (treasure && Number(gold) > 0) treasure.addGold(Number(gold));
+    if (treasure && Number(silver) > 0) treasure.addSilver(Number(silver));
+    if (treasure && Number(bronze) > 0) treasure.addBronze(Number(bronze));
+  }
+
+  /**
+   * get loot report
+   */
+  function getLoot() {
+    return treasure ? treasure.getLoot() : "No loot!";
   }
 
   /**
    * Display the amount of loot in the UI
    */
-  function showLoot() {
+  function showLoot(message) {
     // console.log("showLoot");
     let loot = document.querySelector("#loot");
     if (!loot) return;
-    loot.textContent = treasure.getLoot();
-  }
-
-  /**
-   * Save loot to localStorage and update the UI
-   * @param  {Event} event The event object
-   */
-  function saveLoot(event) {
-    // Create the treasure object
-    let treasure = {
-      gold: event.detail.getGold(),
-      silver: event.detail.getSilver(),
-      bronze: event.detail.getBronze(),
-    };
-
-    // Save it to localStorage
-    localStorage.setItem("ss-treasure", JSON.stringify(treasure));
-
-    // Update the UI
-    showLoot(event.detail);
+    loot.textContent = message;
   }
 
   /**
@@ -343,36 +248,22 @@
     if (!val) return;
 
     // Add the correct loot
-    if (coin === "gold") {
-      treasure.addGold(val);
-    } else if (coin === "silver") {
-      treasure.addSilver(val);
-    } else if (coin === "bronze") {
-      treasure.addBronze(val);
+    if (["gold", "silver", "bronze"].includes(coin)) addLoot({ [coin]: val });
+  }
+
+  function lootHandler(event) {
+    if (event.target?.detail instanceof TreasureChest) {
+      saveLoot();
+      showLoot(event.target.detail.getLoot());
     }
   }
 
-  /**
-   * Listen for loot events
-   * @param  {Constructor} treasure The TreasureChest object
-   */
-  function lootListeners() {
-    document.addEventListener("submit", submitHandler);
-    document.addEventListener("treasure:gold", saveLoot);
-    document.addEventListener("treasure:silver", saveLoot);
-    document.addEventListener("treasure:bronze", saveLoot);
-  }
-
-  //
-  // Inits & Event Listeners
-  //
-
-  if ("customElements" in window && !customElements.get("roll-dice")) {
-    customElements.define("roll-dice", RollDice);
-  }
-
   createTreasure();
-  showLoot();
-  lootListeners();
+  showLoot(getLoot());
+
+  document.addEventListener("submit", submitHandler);
+  document.addEventListener("treasure:gold", lootHandler);
+  document.addEventListener("treasure:silver", lootHandler);
+  document.addEventListener("treasure:bronze", lootHandler);
 
 })();

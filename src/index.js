@@ -1,14 +1,5 @@
-import RollDice from "./RollDice.js";
-import { createTreasure, showLoot, lootListeners } from "./treasure.js";
-
-//
-// Inits & Event Listeners
-//
-
-if ("customElements" in window && !customElements.get("roll-dice")) {
-  customElements.define("roll-dice", RollDice);
-}
+import { createTreasure, getLoot } from "./treasure-service";
+import { showLoot } from "./dom";
 
 createTreasure();
-showLoot();
-lootListeners();
+showLoot(getLoot());
